@@ -1,0 +1,1280 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Trade in 60 Seconds</title>
+<link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Orbitron:wght@400;700;900&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg: #0a0c0f;
+    --surface: #0f1318;
+    --panel: #141920;
+    --border: #1e2730;
+    --border-bright: #2a3540;
+    --amber: #f0a500;
+    --amber-dim: #7a5200;
+    --green: #00c97a;
+    --green-dim: #004d2f;
+    --red: #ff3d5a;
+    --red-dim: #5c0018;
+    --text: #c8d4de;
+    --text-muted: #4a5a68;
+    --text-dim: #2a3540;
+    --mono: 'Share Tech Mono', monospace;
+    --display: 'Orbitron', sans-serif;
+    --scan-line: repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0,0,0,0.03) 2px, rgba(0,0,0,0.03) 4px);
+  }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--mono);
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 16px;
+    overflow-x: hidden;
+  }
+
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background: radial-gradient(ellipse at 50% 0%, rgba(240,165,0,0.04) 0%, transparent 60%);
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  .terminal {
+    width: 100%;
+    max-width: 900px;
+    position: relative;
+    z-index: 1;
+  }
+
+  .terminal-header {
+    background: var(--panel);
+    border: 1px solid var(--border-bright);
+    border-bottom: none;
+    padding: 10px 18px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    border-radius: 6px 6px 0 0;
+  }
+
+  .terminal-title {
+    font-family: var(--display);
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 3px;
+    color: var(--amber);
+    text-transform: uppercase;
+  }
+
+  .terminal-status {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 10px;
+    color: var(--text-muted);
+    letter-spacing: 1px;
+  }
+
+  .status-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--green);
+    animation: blink 1.5s ease-in-out infinite;
+  }
+
+  @keyframes blink {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.3; }
+  }
+
+  .terminal-body {
+    background: var(--surface);
+    border: 1px solid var(--border-bright);
+    border-top: none;
+    border-radius: 0 0 6px 6px;
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  /* TOP ROW: Timer + Price + Balance */
+  .stats-row {
+    display: grid;
+    grid-template-columns: 1fr 2fr 1fr;
+    gap: 10px;
+  }
+
+  .stat-card {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 10px 14px;
+  }
+
+  .stat-label {
+    font-size: 9px;
+    letter-spacing: 2px;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    margin-bottom: 4px;
+  }
+
+  .stat-value {
+    font-family: var(--display);
+    font-size: 20px;
+    font-weight: 700;
+    color: var(--text);
+    line-height: 1;
+  }
+
+  .stat-value.amber { color: var(--amber); }
+  .stat-value.green { color: var(--green); }
+  .stat-value.red { color: var(--red); }
+
+  #timer-val {
+    font-size: 28px;
+    color: var(--amber);
+    transition: color 0.3s;
+  }
+
+  #timer-val.urgent { color: var(--red); animation: pulse-red 0.5s ease-in-out infinite alternate; }
+  @keyframes pulse-red { from { opacity: 0.7; } to { opacity: 1; } }
+
+  #price-val { font-size: 26px; letter-spacing: 1px; }
+
+  /* CHART */
+  .chart-wrapper {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 8px;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .chart-wrapper::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: var(--scan-line);
+    pointer-events: none;
+    opacity: 0.5;
+  }
+
+  .chart-topbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 4px 6px;
+  }
+
+  .chart-pair {
+    font-family: var(--display);
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 2px;
+    color: var(--text);
+  }
+
+  .chart-meta {
+    font-size: 9px;
+    letter-spacing: 1px;
+    color: var(--text-muted);
+  }
+
+  #chart {
+    width: 100%;
+    height: 200px;
+    display: block;
+  }
+
+  /* POSITION INFO */
+  .position-bar {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 8px 14px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    min-height: 42px;
+  }
+
+  .position-info {
+    display: flex;
+    gap: 24px;
+    align-items: center;
+  }
+
+  .pos-item {
+    font-size: 11px;
+  }
+
+  .pos-label {
+    color: var(--text-muted);
+    font-size: 9px;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    margin-bottom: 2px;
+  }
+
+  .pos-val { color: var(--text); font-size: 12px; }
+  .pos-side-buy { color: var(--green); font-family: var(--display); font-size: 11px; font-weight: 700; letter-spacing: 1px; }
+  .pos-side-sell { color: var(--red); font-family: var(--display); font-size: 11px; font-weight: 700; letter-spacing: 1px; }
+
+  .pnl-live {
+    font-family: var(--display);
+    font-size: 16px;
+    font-weight: 700;
+    transition: color 0.2s;
+  }
+
+  .pnl-live.pos { color: var(--green); }
+  .pnl-live.neg { color: var(--red); }
+  .pnl-live.neutral { color: var(--text-muted); }
+
+  .pnl-live.flash-green { animation: flash-g 0.3s ease; }
+  .pnl-live.flash-red { animation: flash-r 0.3s ease; }
+  @keyframes flash-g { 0%,100%{ background:transparent; } 50%{ background: rgba(0,201,122,0.15); border-radius:3px; } }
+  @keyframes flash-r { 0%,100%{ background:transparent; } 50%{ background: rgba(255,61,90,0.15); border-radius:3px; } }
+
+  .no-position {
+    font-size: 11px;
+    color: var(--text-muted);
+    letter-spacing: 1px;
+  }
+
+  /* TRADE BUTTONS */
+  .trade-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+  }
+
+  .trade-btn {
+    border: none;
+    border-radius: 4px;
+    padding: 16px;
+    font-family: var(--display);
+    font-size: 13px;
+    font-weight: 700;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    cursor: pointer;
+    position: relative;
+    overflow: hidden;
+    transition: transform 0.1s, opacity 0.2s;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+  }
+
+  .trade-btn::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: rgba(255,255,255,0.06);
+    opacity: 0;
+    transition: opacity 0.15s;
+  }
+
+  .trade-btn:hover:not(:disabled)::before { opacity: 1; }
+  .trade-btn:active:not(:disabled) { transform: scale(0.97); }
+
+  .btn-buy {
+    background: var(--green-dim);
+    border: 1px solid var(--green);
+    color: var(--green);
+  }
+
+  .btn-sell {
+    background: var(--red-dim);
+    border: 1px solid var(--red);
+    color: var(--red);
+  }
+
+  .trade-btn.active-buy {
+    background: var(--green);
+    color: #001a0e;
+    border-color: var(--green);
+  }
+
+  .trade-btn.active-sell {
+    background: var(--red);
+    color: #1a0008;
+    border-color: var(--red);
+  }
+
+  .trade-btn:disabled {
+    opacity: 0.35;
+    cursor: not-allowed;
+  }
+
+  .btn-sub { font-size: 9px; font-family: var(--mono); letter-spacing: 1px; opacity: 0.7; font-weight: 400; }
+
+  .btn-ripple {
+    position: absolute;
+    border-radius: 50%;
+    width: 60px; height: 60px;
+    transform: translate(-50%,-50%) scale(0);
+    background: rgba(255,255,255,0.15);
+    animation: ripple 0.4s ease-out forwards;
+    pointer-events: none;
+  }
+  @keyframes ripple { to { transform: translate(-50%,-50%) scale(5); opacity: 0; } }
+
+  /* BALANCE HISTORY */
+  .history-bar {
+    display: flex;
+    gap: 4px;
+    align-items: center;
+    padding: 6px 14px;
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    min-height: 32px;
+    overflow: hidden;
+  }
+
+  .history-label {
+    font-size: 9px;
+    letter-spacing: 2px;
+    color: var(--text-dim);
+    text-transform: uppercase;
+    margin-right: 8px;
+    white-space: nowrap;
+  }
+
+  .trade-tag {
+    font-size: 9px;
+    padding: 2px 8px;
+    border-radius: 2px;
+    letter-spacing: 1px;
+    font-family: var(--display);
+    font-weight: 700;
+    white-space: nowrap;
+  }
+
+  .trade-tag.win { background: var(--green-dim); color: var(--green); border: 1px solid rgba(0,201,122,0.3); }
+  .trade-tag.loss { background: var(--red-dim); color: var(--red); border: 1px solid rgba(255,61,90,0.3); }
+  .trade-tag.even { background: var(--border); color: var(--text-muted); border: 1px solid var(--border-bright); }
+
+  /* GAME OVER SCREEN */
+  #game-over {
+    display: none;
+    position: absolute;
+    inset: 0;
+    background: rgba(10,12,15,0.96);
+    z-index: 100;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 20px;
+    border-radius: 6px;
+    text-align: center;
+    padding: 32px;
+  }
+
+  #game-over.show { display: flex; animation: fadeIn 0.5s ease; }
+  @keyframes fadeIn { from { opacity:0; } to { opacity:1; } }
+
+  .game-over-title {
+    font-family: var(--display);
+    font-size: 11px;
+    letter-spacing: 4px;
+    color: var(--text-muted);
+    text-transform: uppercase;
+  }
+
+  .game-over-verdict {
+    font-family: var(--display);
+    font-size: 32px;
+    font-weight: 900;
+    letter-spacing: 2px;
+    line-height: 1;
+  }
+
+  .game-over-verdict.great { color: var(--green); }
+  .game-over-verdict.try { color: var(--amber); }
+
+  .final-stats {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 10px;
+    width: 100%;
+    max-width: 420px;
+  }
+
+  .final-stat {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 12px 10px;
+  }
+
+  .restart-btn {
+    background: transparent;
+    border: 1px solid var(--amber);
+    color: var(--amber);
+    font-family: var(--display);
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 3px;
+    padding: 14px 40px;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: background 0.2s, transform 0.1s;
+    text-transform: uppercase;
+    margin-top: 8px;
+  }
+
+  .restart-btn:hover { background: rgba(240,165,0,0.1); }
+  .restart-btn:active { transform: scale(0.97); }
+
+  /* TICKER TAPE */
+  .ticker {
+    overflow: hidden;
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    background: var(--panel);
+    height: 22px;
+    position: relative;
+  }
+
+  .ticker-inner {
+    display: flex;
+    gap: 40px;
+    white-space: nowrap;
+    position: absolute;
+    animation: scroll-left 30s linear infinite;
+    align-items: center;
+    height: 100%;
+    padding: 0 16px;
+  }
+
+  @keyframes scroll-left { from { transform: translateX(0); } to { transform: translateX(-50%); } }
+
+  .ticker-item {
+    font-size: 9px;
+    letter-spacing: 1px;
+    color: var(--text-muted);
+    display: flex;
+    gap: 8px;
+    align-items: center;
+  }
+
+  .ticker-item .sym { color: var(--text); font-weight: bold; }
+  .ticker-item .chg.pos { color: var(--green); }
+  .ticker-item .chg.neg { color: var(--red); }
+
+  /* Responsive */
+  @media (max-width: 500px) {
+    .stats-row { grid-template-columns: 1fr 1fr; }
+    .stats-row .stat-card:first-child { grid-column: 1 / -1; }
+    #timer-val { font-size: 22px; }
+    #price-val { font-size: 20px; }
+    .game-over-verdict { font-size: 24px; }
+    .final-stats { grid-template-columns: 1fr 1fr; }
+  }
+</style>
+</head>
+<body>
+
+<div class="terminal">
+  <!-- TICKER -->
+  <div class="ticker" style="margin-bottom:8px;">
+    <div class="ticker-inner" id="ticker-inner"></div>
+  </div>
+
+  <div class="terminal-header">
+    <div class="terminal-title">Trade in 60 Seconds</div>
+    <div style="display:flex;align-items:center;gap:12px;">
+      <button id="music-btn" onclick="toggleMusic()" style="background:transparent;border:1px solid var(--border-bright);color:var(--amber);font-family:var(--mono);font-size:9px;letter-spacing:1px;padding:4px 10px;border-radius:3px;cursor:pointer;transition:opacity 0.2s;">♪ ON</button>
+      <div class="terminal-status">
+        <div class="status-dot"></div>
+        <span>LIVE MARKET SIM</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="terminal-body" style="position:relative;">
+
+    <!-- GAME OVER OVERLAY -->
+    <div id="game-over">
+      <div class="game-over-title">Session Closed</div>
+      <div class="game-over-verdict" id="go-verdict"></div>
+      <div class="final-stats">
+        <div class="final-stat">
+          <div class="stat-label">Final P&L</div>
+          <div class="stat-value" id="go-pnl" style="font-size:16px;"></div>
+        </div>
+        <div class="final-stat">
+          <div class="stat-label">Trades</div>
+          <div class="stat-value" id="go-trades" style="font-size:16px;"></div>
+        </div>
+        <div class="final-stat">
+          <div class="stat-label">Win Rate</div>
+          <div class="stat-value" id="go-wr" style="font-size:16px;"></div>
+        </div>
+      </div>
+      <button class="restart-btn" onclick="restartGame()">&#9655; New Session</button>
+    </div>
+
+    <!-- STATS ROW -->
+    <div class="stats-row">
+      <div class="stat-card" style="text-align:center;">
+        <div class="stat-label">Time Left</div>
+        <div class="stat-value" id="timer-val">60</div>
+      </div>
+      <div class="stat-card" style="text-align:center; border-color: var(--amber-dim);">
+        <div class="stat-label">BTC / USD</div>
+        <div class="stat-value amber" id="price-val">—</div>
+      </div>
+      <div class="stat-card" style="text-align:center;">
+        <div class="stat-label">Balance</div>
+        <div class="stat-value" id="balance-val" style="font-size:16px;">$10,000</div>
+      </div>
+    </div>
+
+    <!-- CHART -->
+    <div class="chart-wrapper">
+      <div class="chart-topbar">
+        <div class="chart-pair">BTC / USD &nbsp;<span style="font-size:9px;color:var(--text-muted);letter-spacing:1px;">1S CHART</span></div>
+        <div class="chart-meta" id="ohlc-display">O: — &nbsp; H: — &nbsp; L: — &nbsp; C: —</div>
+      </div>
+      <canvas id="chart"></canvas>
+    </div>
+
+    <!-- ACTIVE POSITION -->
+    <div class="position-bar">
+      <div id="pos-display" class="no-position">No open position — place a trade to begin</div>
+      <div class="pnl-live neutral" id="pnl-live" style="display:none;"></div>
+    </div>
+
+    <!-- TRADE BUTTONS -->
+    <div class="trade-row">
+      <button class="trade-btn btn-buy" id="btn-buy" onclick="openTrade('buy', event)">
+        <span>▲ BUY</span>
+        <span class="btn-sub">Long Position</span>
+      </button>
+      <button class="trade-btn btn-sell" id="btn-sell" onclick="openTrade('sell', event)">
+        <span>▼ SELL</span>
+        <span class="btn-sub">Short Position</span>
+      </button>
+    </div>
+
+    <!-- TRADE HISTORY -->
+    <div class="history-bar">
+      <span class="history-label">Trade Log</span>
+      <div id="trade-history" style="display:flex;gap:4px;flex-wrap:nowrap;overflow:hidden;"></div>
+      <span id="history-empty" style="font-size:9px;color:var(--text-dim);letter-spacing:1px;">Awaiting first trade...</span>
+    </div>
+
+  </div>
+</div>
+
+<script>
+/* ===== AUDIO ENGINE ===== */
+const AC = new (window.AudioContext || window.webkitAudioContext)();
+let masterGain = AC.createGain();
+masterGain.gain.value = 0.85;
+masterGain.connect(AC.destination);
+
+let musicMuted = false;
+let musicGainNode = AC.createGain();
+musicGainNode.gain.value = 0.38;
+musicGainNode.connect(masterGain);
+
+/* --- Tone SFX --- */
+function playTone(freq, type, dur, vol, target) {
+  try {
+    const osc = AC.createOscillator();
+    const gain = AC.createGain();
+    osc.connect(gain);
+    gain.connect(target || masterGain);
+    osc.type = type || 'sine';
+    osc.frequency.setValueAtTime(freq, AC.currentTime);
+    gain.gain.setValueAtTime(vol || 0.18, AC.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.001, AC.currentTime + dur);
+    osc.start();
+    osc.stop(AC.currentTime + dur);
+  } catch(e) {}
+}
+
+/* --- Voice Announcer (Web Speech API) --- */
+function speak(text, pitch, rate) {
+  try {
+    window.speechSynthesis.cancel();
+    const u = new SpeechSynthesisUtterance(text);
+    u.volume = 1.0;
+    u.rate   = rate  || 1.15;
+    u.pitch  = pitch || 1.1;
+    /* Pick an English voice if available */
+    const voices = window.speechSynthesis.getVoices();
+    const eng = voices.find(v => v.lang.startsWith('en') && !v.name.includes('Google')) ||
+                voices.find(v => v.lang.startsWith('en')) || null;
+    if (eng) u.voice = eng;
+    window.speechSynthesis.speak(u);
+  } catch(e) {}
+}
+
+/* Pre-load voices (some browsers need this trigger) */
+if (window.speechSynthesis) {
+  window.speechSynthesis.getVoices();
+  window.speechSynthesis.onvoiceschanged = () => window.speechSynthesis.getVoices();
+}
+
+/* --- SFX helpers --- */
+function sfxBuy() {
+  playTone(440, 'sine', 0.08, 0.28); setTimeout(() => playTone(660, 'sine', 0.12, 0.22), 70);
+  setTimeout(() => speak("Buy! Long position opened!", 1.2, 1.2), 40);
+}
+function sfxSell() {
+  playTone(330, 'sine', 0.08, 0.28); setTimeout(() => playTone(220, 'sine', 0.12, 0.22), 70);
+  setTimeout(() => speak("Sell! Short position opened!", 0.9, 1.2), 40);
+}
+function sfxClose(profit) {
+  if (profit > 0) {
+    playTone(523, 'sine', 0.08, 0.28);
+    setTimeout(() => playTone(659, 'sine', 0.08, 0.25), 60);
+    setTimeout(() => playTone(784, 'sine', 0.18, 0.32), 120);
+    setTimeout(() => speak("Position closed! Nice profit!", 1.3, 1.1), 80);
+  } else {
+    playTone(300, 'triangle', 0.08, 0.28);
+    setTimeout(() => playTone(200, 'triangle', 0.22, 0.22), 80);
+    setTimeout(() => speak("Position closed! Take the loss!", 0.8, 1.0), 80);
+  }
+}
+function sfxTick() { playTone(900, 'square', 0.025, 0.06); }
+function sfxTick10() {
+  playTone(1100, 'square', 0.05, 0.2);
+  speak("Hurry up!", 1.4, 1.4);
+}
+function sfxEnd() {
+  [440,494,523,587,659].forEach((f,i) => setTimeout(() => playTone(f,'sine',0.18,0.18), i*80));
+}
+function sfxVoiceEnd(verdict) {
+  stopBGMusic();
+  const msg = verdict === 'GREAT TRADER' ? "Session over! Great trader! Well done!"
+            : verdict === 'NOT BAD'      ? "Session over! Not bad! Keep practising!"
+            :                              "Session over! Try again! You can do it!";
+  setTimeout(() => speak(msg, 1.1, 0.95), 300);
+}
+
+/* ===== BACKGROUND MUSIC ENGINE ===== */
+/* Electronic trading-floor beat: kick, snare, hihat, bass line */
+let beatScheduler = null;
+let beatStep = 0;
+let nextBeatTime = 0;
+const BPM = 128;
+const STEP = 60 / BPM / 2; /* 8th-note grid */
+
+/* 16-step patterns (two bars of 8th notes) */
+const kickPat  = [1,0,0,0, 1,0,0,0, 1,0,0,0, 1,0,1,0];
+const snarePat = [0,0,0,0, 1,0,0,0, 0,0,0,0, 1,0,0,0];
+const hihatPat = [1,1,1,1, 1,1,1,1, 1,1,1,1, 1,1,1,1];
+const openHat  = [0,0,0,0, 0,0,1,0, 0,0,0,0, 0,0,1,0];
+/* Bass note sequence (MIDI offsets from C2=36): */
+const bassNotes = [36, 36, 43, 36, 41, 36, 43, 43,
+                   36, 36, 43, 36, 41, 41, 43, 36];
+const bassOct   = [1,  1,  1,  1,  1,  1,  1,  1,
+                   1,  1,  1,  1,  1,  1,  1,  1 ];
+
+function midiToHz(note) { return 440 * Math.pow(2, (note - 69) / 12); }
+
+function scheduleKick(t) {
+  /* Sine sub + filtered noise punch */
+  const osc = AC.createOscillator(), g = AC.createGain();
+  osc.type = 'sine'; osc.frequency.setValueAtTime(160, t);
+  osc.frequency.exponentialRampToValueAtTime(40, t + 0.12);
+  g.gain.setValueAtTime(1.8, t); g.gain.exponentialRampToValueAtTime(0.001, t + 0.28);
+  osc.connect(g); g.connect(musicGainNode); osc.start(t); osc.stop(t + 0.3);
+  /* click transient */
+  const buf = AC.createBuffer(1,512,AC.sampleRate), data = buf.getChannelData(0);
+  for (let i=0;i<512;i++) data[i]=(Math.random()*2-1)*Math.pow(1-i/512,3);
+  const src = AC.createBufferSource(), g2 = AC.createGain();
+  src.buffer = buf; g2.gain.setValueAtTime(1.2,t); g2.gain.exponentialRampToValueAtTime(0.001,t+0.06);
+  src.connect(g2); g2.connect(musicGainNode); src.start(t); src.stop(t+0.06);
+}
+
+function scheduleSnare(t) {
+  const buf = AC.createBuffer(1,AC.sampleRate*0.25,AC.sampleRate);
+  const data = buf.getChannelData(0);
+  for (let i=0;i<data.length;i++) data[i]=(Math.random()*2-1)*Math.pow(1-i/data.length,1.4);
+  const src = AC.createBufferSource(), g = AC.createGain();
+  src.buffer = buf;
+  g.gain.setValueAtTime(1.1,t); g.gain.exponentialRampToValueAtTime(0.001,t+0.22);
+  /* tone layer */
+  const osc = AC.createOscillator(), go = AC.createGain();
+  osc.type='triangle'; osc.frequency.setValueAtTime(200,t);
+  osc.frequency.exponentialRampToValueAtTime(100,t+0.1);
+  go.gain.setValueAtTime(0.5,t); go.gain.exponentialRampToValueAtTime(0.001,t+0.12);
+  src.connect(g); g.connect(musicGainNode);
+  osc.connect(go); go.connect(musicGainNode);
+  src.start(t); src.stop(t+0.25); osc.start(t); osc.stop(t+0.14);
+}
+
+function scheduleHihat(t, open) {
+  const dur = open ? 0.18 : 0.05;
+  const buf = AC.createBuffer(1,Math.ceil(AC.sampleRate*dur),AC.sampleRate);
+  const data = buf.getChannelData(0);
+  for (let i=0;i<data.length;i++) data[i]=(Math.random()*2-1);
+  const src = AC.createBufferSource();
+  const hpf = AC.createBiquadFilter(); hpf.type='highpass'; hpf.frequency.value=8000;
+  const g = AC.createGain();
+  src.buffer=buf;
+  g.gain.setValueAtTime(open?0.45:0.22, t);
+  g.gain.exponentialRampToValueAtTime(0.001, t+dur);
+  src.connect(hpf); hpf.connect(g); g.connect(musicGainNode);
+  src.start(t); src.stop(t+dur);
+}
+
+function scheduleBass(t, step) {
+  const freq = midiToHz(bassNotes[step]);
+  const osc = AC.createOscillator(), g = AC.createGain();
+  osc.type = 'sawtooth';
+  /* Low-pass to soften */
+  const lpf = AC.createBiquadFilter(); lpf.type='lowpass'; lpf.frequency.value=320;
+  osc.frequency.setValueAtTime(freq, t);
+  g.gain.setValueAtTime(0.9, t); g.gain.exponentialRampToValueAtTime(0.001, t+STEP*0.85);
+  osc.connect(lpf); lpf.connect(g); g.connect(musicGainNode);
+  osc.start(t); osc.stop(t+STEP*0.9);
+}
+
+function schedulePad(t, step) {
+  /* Subtle chord stab on beat 1 of each bar */
+  if (step !== 0 && step !== 8) return;
+  const chords = [[36,43,48],[36,41,48],[38,43,50],[34,41,46]];
+  const chord = chords[Math.floor(step/8) % chords.length];
+  chord.forEach(note => {
+    const osc = AC.createOscillator(), g = AC.createGain();
+    osc.type='sine'; osc.frequency.value = midiToHz(note+12);
+    g.gain.setValueAtTime(0.12,t); g.gain.linearRampToValueAtTime(0.08,t+0.3);
+    g.gain.exponentialRampToValueAtTime(0.001,t+STEP*8*0.9);
+    osc.connect(g); g.connect(musicGainNode); osc.start(t); osc.stop(t+STEP*8);
+  });
+}
+
+function beatSchedulerLoop() {
+  while (nextBeatTime < AC.currentTime + 0.12) {
+    const s = beatStep % 16;
+    if (kickPat[s])  scheduleKick(nextBeatTime);
+    if (snarePat[s]) scheduleSnare(nextBeatTime);
+    if (hihatPat[s]) scheduleHihat(nextBeatTime, false);
+    if (openHat[s])  scheduleHihat(nextBeatTime, true);
+    if (s % 2 === 0) scheduleBass(nextBeatTime, s);
+    schedulePad(nextBeatTime, s);
+    nextBeatTime += STEP;
+    beatStep++;
+  }
+}
+
+function startBGMusic() {
+  if (musicMuted) return;
+  beatStep = 0;
+  nextBeatTime = AC.currentTime + 0.05;
+  if (beatScheduler) clearInterval(beatScheduler);
+  beatScheduler = setInterval(beatSchedulerLoop, 25);
+}
+
+function stopBGMusic() {
+  if (beatScheduler) { clearInterval(beatScheduler); beatScheduler = null; }
+}
+
+function toggleMusic() {
+  musicMuted = !musicMuted;
+  const btn = document.getElementById('music-btn');
+  if (musicMuted) {
+    stopBGMusic();
+    musicGainNode.gain.setTargetAtTime(0, AC.currentTime, 0.1);
+    btn.textContent = '♪ OFF';
+    btn.style.opacity = '0.4';
+  } else {
+    musicGainNode.gain.setTargetAtTime(0.38, AC.currentTime, 0.1);
+    if (state && state.running) startBGMusic();
+    btn.textContent = '♪ ON';
+    btn.style.opacity = '1';
+  }
+}
+
+/* ===== GAME STATE ===== */
+let state = {};
+
+function initState() {
+  state = {
+    running: false,
+    started: false,
+    timeLeft: 60,
+    balance: 10000,
+    totalPnL: 0,
+    position: null,
+    candles: [],
+    currentPrice: 43200 + Math.random() * 800,
+    intervalId: null,
+    tickId: null,
+    trades: [],
+    wins: 0,
+    losses: 0,
+    tradeCount: 0,
+  };
+}
+
+/* ===== PRICE ENGINE ===== */
+let volatility = 40;
+let trend = 0;
+let trendTimer = 0;
+
+function nextPrice(base) {
+  trendTimer--;
+  if (trendTimer <= 0) {
+    trend = (Math.random() - 0.5) * 0.6;
+    trendTimer = 4 + Math.floor(Math.random() * 8);
+  }
+  const noise = (Math.random() - 0.5) * 2 * volatility;
+  const trendMove = trend * volatility * 0.8;
+  return Math.max(40000, Math.min(50000, base + noise + trendMove));
+}
+
+/* ===== CANDLE BUILDER ===== */
+let activeCandle = null;
+
+function startCandle(price) {
+  activeCandle = { o: price, h: price, l: price, c: price, ticks: 0 };
+}
+
+function tickCandle(price) {
+  if (!activeCandle) { startCandle(price); return; }
+  activeCandle.h = Math.max(activeCandle.h, price);
+  activeCandle.l = Math.min(activeCandle.l, price);
+  activeCandle.c = price;
+  activeCandle.ticks++;
+}
+
+function closeCandle() {
+  if (activeCandle) {
+    state.candles.push({ ...activeCandle });
+    if (state.candles.length > 60) state.candles.shift();
+  }
+  startCandle(state.currentPrice);
+}
+
+/* ===== CANVAS CHART ===== */
+const canvas = document.getElementById('chart');
+const ctx = canvas.getContext('2d');
+
+function resizeCanvas() {
+  canvas.width = canvas.offsetWidth * devicePixelRatio;
+  canvas.height = canvas.offsetHeight * devicePixelRatio;
+  ctx.scale(devicePixelRatio, devicePixelRatio);
+}
+
+function drawChart() {
+  const W = canvas.offsetWidth;
+  const H = canvas.offsetHeight;
+  ctx.clearRect(0, 0, W, H);
+
+  const candles = [...state.candles];
+  if (activeCandle) candles.push({ ...activeCandle });
+  if (candles.length < 2) return;
+
+  const show = candles.slice(-50);
+  const prices = show.flatMap(c => [c.h, c.l]);
+  const minP = Math.min(...prices);
+  const maxP = Math.max(...prices);
+  const range = maxP - minP || 100;
+  const padY = range * 0.1;
+  const lo = minP - padY;
+  const hi = maxP + padY;
+
+  function py(p) { return H - ((p - lo) / (hi - lo)) * H; }
+
+  const cw = Math.floor((W - 20) / show.length);
+  const gap = Math.max(1, Math.floor(cw * 0.15));
+  const bw = cw - gap;
+
+  // Grid lines
+  ctx.strokeStyle = 'rgba(30,39,48,0.8)';
+  ctx.lineWidth = 0.5;
+  const gridLevels = 5;
+  for (let i = 0; i <= gridLevels; i++) {
+    const p = lo + (hi - lo) * (i / gridLevels);
+    const y = py(p);
+    ctx.beginPath();
+    ctx.moveTo(0, y);
+    ctx.lineTo(W, y);
+    ctx.stroke();
+
+    // Price label
+    ctx.fillStyle = 'rgba(74,90,104,0.7)';
+    ctx.font = `${8 * devicePixelRatio / devicePixelRatio}px 'Share Tech Mono'`;
+    ctx.textAlign = 'right';
+    ctx.fillText(p.toFixed(0), W - 2, y - 2);
+  }
+
+  // Candles
+  show.forEach((c, i) => {
+    const x = 10 + i * cw;
+    const bullish = c.c >= c.o;
+    const color = bullish ? '#00c97a' : '#ff3d5a';
+    const dimColor = bullish ? 'rgba(0,201,122,0.3)' : 'rgba(255,61,90,0.3)';
+
+    // Wick
+    ctx.strokeStyle = color;
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(x + bw / 2, py(c.h));
+    ctx.lineTo(x + bw / 2, py(c.l));
+    ctx.stroke();
+
+    // Body
+    const top = py(Math.max(c.o, c.c));
+    const bottom = py(Math.min(c.o, c.c));
+    const bodyH = Math.max(1, bottom - top);
+    ctx.fillStyle = color;
+    ctx.fillRect(x, top, bw, bodyH);
+
+    // Dim inner for hollow look on last candle
+    if (i === show.length - 1 && activeCandle) {
+      ctx.fillStyle = dimColor;
+      ctx.fillRect(x + 1, top + 1, bw - 2, bodyH - 2);
+    }
+  });
+
+  // Entry price line
+  if (state.position) {
+    const ep = state.position.entryPrice;
+    const ey = py(ep);
+    ctx.setLineDash([4, 3]);
+    ctx.strokeStyle = state.position.side === 'buy' ? 'rgba(0,201,122,0.5)' : 'rgba(255,61,90,0.5)';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(0, ey);
+    ctx.lineTo(W, ey);
+    ctx.stroke();
+    ctx.setLineDash([]);
+
+    ctx.fillStyle = state.position.side === 'buy' ? 'var(--green)' : 'var(--red)';
+    ctx.font = `9px 'Share Tech Mono'`;
+    ctx.textAlign = 'left';
+    ctx.fillStyle = state.position.side === 'buy' ? '#00c97a' : '#ff3d5a';
+    ctx.fillText('ENTRY ' + ep.toFixed(0), 4, ey - 3);
+  }
+
+  // Current price line
+  const curY = py(state.currentPrice);
+  ctx.setLineDash([2, 2]);
+  ctx.strokeStyle = 'rgba(240,165,0,0.4)';
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.moveTo(0, curY);
+  ctx.lineTo(W, curY);
+  ctx.stroke();
+  ctx.setLineDash([]);
+
+  // OHLC display
+  if (activeCandle) {
+    const el = document.getElementById('ohlc-display');
+    el.textContent = `O: ${activeCandle.o.toFixed(0)}  H: ${activeCandle.h.toFixed(0)}  L: ${activeCandle.l.toFixed(0)}  C: ${activeCandle.c.toFixed(0)}`;
+  }
+}
+
+/* ===== UI UPDATES ===== */
+function updateUI() {
+  const priceEl = document.getElementById('price-val');
+  priceEl.textContent = '$' + state.currentPrice.toFixed(2);
+
+  const balEl = document.getElementById('balance-val');
+  const displayBal = state.balance + (state.position ? calcPnL() : 0);
+  balEl.textContent = '$' + displayBal.toFixed(2);
+  balEl.className = 'stat-value' + (displayBal >= 10000 ? ' green' : displayBal < 10000 ? ' red' : '');
+
+  const timerEl = document.getElementById('timer-val');
+  timerEl.textContent = state.timeLeft;
+  timerEl.className = 'stat-value' + (state.timeLeft <= 10 ? ' urgent' : ' amber');
+
+  if (state.position) {
+    const pnl = calcPnL();
+    const pnlEl = document.getElementById('pnl-live');
+    const prevSign = pnlEl.dataset.sign || '0';
+    const newSign = pnl > 0 ? '+' : pnl < 0 ? '-' : '0';
+
+    pnlEl.style.display = 'block';
+    pnlEl.textContent = (pnl >= 0 ? '+' : '') + '$' + pnl.toFixed(2);
+    pnlEl.className = 'pnl-live ' + (pnl > 0 ? 'pos' : pnl < 0 ? 'neg' : 'neutral');
+
+    if (prevSign !== newSign && prevSign !== '0') {
+      pnlEl.classList.add(pnl > 0 ? 'flash-green' : 'flash-red');
+      setTimeout(() => pnlEl.classList.remove('flash-green', 'flash-red'), 300);
+    }
+    pnlEl.dataset.sign = newSign;
+
+    const posEl = document.getElementById('pos-display');
+    posEl.innerHTML = `
+      <div class="position-info">
+        <div class="pos-item">
+          <div class="pos-label">Side</div>
+          <div class="${state.position.side === 'buy' ? 'pos-side-buy' : 'pos-side-sell'}">${state.position.side === 'buy' ? '▲ LONG' : '▼ SHORT'}</div>
+        </div>
+        <div class="pos-item">
+          <div class="pos-label">Entry</div>
+          <div class="pos-val">$${state.position.entryPrice.toFixed(2)}</div>
+        </div>
+        <div class="pos-item">
+          <div class="pos-label">Current</div>
+          <div class="pos-val">$${state.currentPrice.toFixed(2)}</div>
+        </div>
+      </div>
+    `;
+  } else {
+    document.getElementById('pnl-live').style.display = 'none';
+    document.getElementById('pos-display').innerHTML = `<div class="no-position">No open position — place a trade to begin</div>`;
+    document.getElementById('pnl-live').dataset.sign = '0';
+  }
+
+  // Button states
+  const buyBtn = document.getElementById('btn-buy');
+  const sellBtn = document.getElementById('btn-sell');
+
+  buyBtn.className = 'trade-btn btn-buy' + (state.position?.side === 'buy' ? ' active-buy' : '');
+  sellBtn.className = 'trade-btn btn-sell' + (state.position?.side === 'sell' ? ' active-sell' : '');
+
+  buyBtn.innerHTML = state.position?.side === 'buy'
+    ? '<span>✓ LONG ACTIVE</span><span class="btn-sub">Close to sell</span>'
+    : '<span>▲ BUY</span><span class="btn-sub">Open Long</span>';
+
+  sellBtn.innerHTML = state.position?.side === 'sell'
+    ? '<span>✓ SHORT ACTIVE</span><span class="btn-sub">Close to buy</span>'
+    : '<span>▼ SELL</span><span class="btn-sub">Open Short</span>';
+
+  const disabled = !state.running;
+  buyBtn.disabled = disabled;
+  sellBtn.disabled = disabled;
+}
+
+function calcPnL() {
+  if (!state.position) return 0;
+  const diff = state.currentPrice - state.position.entryPrice;
+  return state.position.side === 'buy' ? diff * 0.1 : -diff * 0.1;
+}
+
+/* ===== TRADE ACTIONS ===== */
+function openTrade(side, e) {
+  if (!state.running) return;
+
+  // Ripple
+  if (e) {
+    const btn = e.currentTarget;
+    const rect = btn.getBoundingClientRect();
+    const rip = document.createElement('div');
+    rip.className = 'btn-ripple';
+    rip.style.left = (e.clientX - rect.left) + 'px';
+    rip.style.top = (e.clientY - rect.top) + 'px';
+    btn.appendChild(rip);
+    setTimeout(() => rip.remove(), 400);
+  }
+
+  if (state.position) {
+    // Close existing
+    const pnl = calcPnL();
+    state.balance += pnl;
+    state.totalPnL += pnl;
+
+    sfxClose(pnl);
+
+    // Log trade
+    const tag = pnl > 0.01 ? 'win' : pnl < -0.01 ? 'loss' : 'even';
+    if (pnl > 0.01) state.wins++;
+    else if (pnl < -0.01) state.losses++;
+    state.tradeCount++;
+
+    const hist = document.getElementById('trade-history');
+    document.getElementById('history-empty').style.display = 'none';
+    const el = document.createElement('span');
+    el.className = 'trade-tag ' + tag;
+    el.textContent = (pnl >= 0 ? '+' : '') + '$' + pnl.toFixed(1);
+    hist.appendChild(el);
+
+    state.position = null;
+
+    if (side !== (state.position?.side)) {
+      // If clicking opposite side, just close
+      if ((side === 'buy' && pnl !== null) || (side === 'sell' && pnl !== null)) {
+        updateUI();
+        drawChart();
+        return;
+      }
+    }
+  } else {
+    // Open new position
+    state.position = { side, entryPrice: state.currentPrice };
+    side === 'buy' ? sfxBuy() : sfxSell();
+    updateUI();
+    drawChart();
+    return;
+  }
+
+  // After close, open opposite if it's a real switch
+  if (side) {
+    state.position = { side, entryPrice: state.currentPrice };
+    side === 'buy' ? sfxBuy() : sfxSell();
+  }
+
+  updateUI();
+  drawChart();
+}
+
+/* ===== GAME LOOP ===== */
+let candleTimer = 0;
+
+function gameTick() {
+  state.currentPrice = nextPrice(state.currentPrice);
+  tickCandle(state.currentPrice);
+
+  candleTimer++;
+  if (candleTimer >= 6) {
+    closeCandle();
+    candleTimer = 0;
+  }
+
+  updateUI();
+  drawChart();
+}
+
+function timerTick() {
+  state.timeLeft--;
+  if (state.timeLeft === 10) {
+    sfxTick10();
+  } else {
+    sfxTick();
+  }
+  if (state.timeLeft <= 0) {
+    endGame();
+  }
+}
+
+function startGame() {
+  if (state.running) return;
+  state.running = true;
+  state.started = true;
+
+  resizeCanvas();
+  startCandle(state.currentPrice);
+  for (let i = 0; i < 30; i++) {
+    state.currentPrice = nextPrice(state.currentPrice);
+    tickCandle(state.currentPrice);
+    if (i % 6 === 5) closeCandle();
+  }
+  updateUI();
+  drawChart();
+
+  state.tickId = setInterval(gameTick, 500);
+  state.intervalId = setInterval(timerTick, 1000);
+  startBGMusic();
+  speak("Game started! Trade fast!", 1.1, 1.15);
+}
+
+function endGame() {
+  state.running = false;
+  clearInterval(state.tickId);
+  clearInterval(state.intervalId);
+
+  // Close open position
+  if (state.position) {
+    const pnl = calcPnL();
+    state.balance += pnl;
+    state.totalPnL += pnl;
+    if (pnl > 0.01) state.wins++;
+    else if (pnl < -0.01) state.losses++;
+    state.tradeCount++;
+    state.position = null;
+  }
+
+  const pnl = state.totalPnL;
+  const wr = state.tradeCount > 0 ? Math.round((state.wins / state.tradeCount) * 100) : 0;
+  sfxEnd();
+  const verdictText = pnl >= 50 ? 'GREAT TRADER' : pnl >= 0 ? 'NOT BAD' : 'TRY AGAIN';
+  sfxVoiceEnd(verdictText);
+
+  document.getElementById('go-verdict').textContent = verdictText;
+  document.getElementById('go-verdict').className = 'game-over-verdict ' + (pnl >= 0 ? 'great' : 'try');
+  document.getElementById('go-pnl').textContent = (pnl >= 0 ? '+' : '') + '$' + pnl.toFixed(2);
+  document.getElementById('go-pnl').className = 'stat-value ' + (pnl >= 0 ? 'green' : 'red');
+  document.getElementById('go-trades').textContent = state.tradeCount;
+  document.getElementById('go-trades').className = 'stat-value';
+  document.getElementById('go-wr').textContent = wr + '%';
+  document.getElementById('go-wr').className = 'stat-value ' + (wr >= 50 ? 'green' : 'red');
+
+  document.getElementById('game-over').classList.add('show');
+}
+
+function restartGame() {
+  document.getElementById('game-over').classList.remove('show');
+  document.getElementById('trade-history').innerHTML = '';
+  document.getElementById('history-empty').style.display = '';
+  initState();
+  trend = 0; trendTimer = 0; candleTimer = 0; activeCandle = null;
+  startGame();
+}
+
+/* ===== TICKER TAPE ===== */
+const tickers = ['ETH/USD','SOL/USD','BNB/USD','XRP/USD','ADA/USD','DOGE/USD','AVAX/USD','LINK/USD','DOT/USD','MATIC/USD'];
+const tickerPrices = {};
+tickers.forEach(t => { tickerPrices[t] = 100 + Math.random() * 4000; });
+
+function buildTicker() {
+  const items = tickers.map(sym => {
+    const chg = (Math.random() - 0.49) * 5;
+    tickerPrices[sym] *= (1 + chg / 1000);
+    const sign = chg >= 0 ? '+' : '';
+    return `<span class="ticker-item"><span class="sym">${sym}</span> <span>${tickerPrices[sym].toFixed(2)}</span> <span class="chg ${chg>=0?'pos':'neg'}">${sign}${chg.toFixed(2)}%</span></span>`;
+  }).join('');
+  const inner = document.getElementById('ticker-inner');
+  inner.innerHTML = items + items; // duplicate for seamless scroll
+}
+
+buildTicker();
+setInterval(buildTicker, 8000);
+
+/* ===== RESIZE ===== */
+window.addEventListener('resize', () => { resizeCanvas(); drawChart(); });
+
+/* ===== INIT ===== */
+initState();
+updateUI();
+resizeCanvas();
+
+// Start on first interaction to unlock audio
+let gameStarted = false;
+document.body.addEventListener('click', () => {
+  if (!gameStarted) {
+    gameStarted = true;
+    AC.resume().then(startGame);
+  }
+}, { once: false });
+
+// Auto-start with muted audio on page load
+setTimeout(() => {
+  if (!gameStarted) {
+    gameStarted = true;
+    startGame();
+  }
+}, 300);
+
+// Draw idle chart
+drawChart();
+</script>
+</body>
+</html>
